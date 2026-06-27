@@ -15,7 +15,14 @@ app.get('/', (req, res) => {
 });
 
 const authRoutes = require('./routes/user.route');
+const annonceRoutes = require('./routes/annonce.route');
+const categorieRoutes = require('./routes/categorie.route');
+const messageRoutes = require('./routes/message.route');
+
 app.use('/api/auth', authRoutes);
+app.use('/api/annonces', annonceRoutes);
+app.use('/api/categories', categorieRoutes);
+app.use('/api/messages', messageRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Serveur démarré sur le port ${PORT}`));
