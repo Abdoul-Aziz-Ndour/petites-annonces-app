@@ -161,3 +161,51 @@ exports.reinitialiserMotDePasse = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la réinitialisation", error: error.message });
   }
 };
+
+// récupérer le profil de l'utilisateur connecté
+exports.getProfil = async (req, res) => {
+  try {
+    const utilisateur = await Utilisateur.findById(req.utilisateur.id).select('-mot_de_passe');
+
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    res.json({ utilisateur });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la récupération du profil", error: error.message });
+  }
+};
+
+// modifier le profil de l'utilisateur connecté
+exports.modifierProfil = async (req, res) => {
+  try {
+    const { nom, prenom, telephone } = req.body;
+
+    const utilisateur = await Utilisateur.findById(req.utilisateur.id);
+
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    utilisateur.nom = nom || utilisateur.nom;
+    utilisateur.prenom = prenom || utilisateur.prenom;
+    utilisateur.telephone = telephone || utilisateur.telephone;
+
+    await utilisateur.save();
+
+    res.json({
+      message: "Profil mis à jour avec succès",
+      utilisateur: {
+        id: utilisateur._id,
+        nom: utilisateur.nom,
+        prenom: utilisateur.prenom,
+        email: utilisateur.email,
+        telephone: utilisateur.telephone,
+        role: utilisateur.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la modification du profil", error: error.message });
+  }
+};
