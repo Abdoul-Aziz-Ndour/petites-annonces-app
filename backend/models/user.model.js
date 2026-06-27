@@ -40,6 +40,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  reinitialisation_token: {
+    type: String,
+  },
+  reinitialisation_expire: {
+    type: Date,
+  },
 }, { timestamps: true });
 
 // hacher le mot de passe avant sauvegarde

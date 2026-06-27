@@ -83,3 +83,81 @@ exports.connexion = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la connexion", error: error.message });
   }
 };
+
+// déconnexion
+exports.deconnexion = async (req, res) => {
+  try {
+    // avec JWT stateless, la déconnexion réelle se fait côté client
+    // (suppression du token stocké). Cette route confirme l'action
+    // et peut être étendue plus tard avec une blacklist de tokens si besoin.
+    res.json({ message: "Déconnexion réussie" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la déconnexion", error: error.message });
+  }
+};
+
+const crypto = require('crypto');
+const transporter = require('../config/mailer');
+
+// demande de réinitialisation
+exports.motDePasseOublie = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const utilisateur = await Utilisateur.findOne({ email });
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Aucun compte associé à cet email" });
+    }
+
+    // générer un token aléatoire
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    utilisateur.reinitialisation_token = resetToken;
+    utilisateur.reinitialisation_expire = Date.now() + 3600000; // 1 heure
+    await utilisateur.save();
+
+    const lienReinitialisation = `http://localhost:5173/reinitialiser-mot-de-passe/${resetToken}`;
+
+    await transporter.sendMail({
+      from: '"Petites Annonces" <no-reply@petites-annonces.com>',
+      to: utilisateur.email,
+      subject: "Réinitialisation de votre mot de passe",
+      html: `
+        <p>Bonjour ${utilisateur.prenom},</p>
+        <p>Vous avez demandé à réinitialiser votre mot de passe.</p>
+        <p>Cliquez sur ce lien pour continuer (valable 1 heure) :</p>
+        <a href="${lienReinitialisation}">${lienReinitialisation}</a>
+      `,
+    });
+
+    res.json({ message: "Email de réinitialisation envoyé" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de l'envoi de l'email", error: error.message });
+  }
+};
+
+// réinitialiser le mot de passe avec le token
+exports.reinitialiserMotDePasse = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { nouveau_mot_de_passe } = req.body;
+
+    const utilisateur = await Utilisateur.findOne({
+      reinitialisation_token: token,
+      reinitialisation_expire: { $gt: Date.now() },
+    });
+
+    if (!utilisateur) {
+      return res.status(400).json({ message: "Token invalide ou expiré" });
+    }
+
+    utilisateur.mot_de_passe = nouveau_mot_de_passe;
+    utilisateur.reinitialisation_token = undefined;
+    utilisateur.reinitialisation_expire = undefined;
+    await utilisateur.save();
+
+    res.json({ message: "Mot de passe réinitialisé avec succès" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la réinitialisation", error: error.message });
+  }
+};
