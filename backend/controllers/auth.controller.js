@@ -209,3 +209,28 @@ exports.modifierProfil = async (req, res) => {
     res.status(500).json({ message: "Erreur lors de la modification du profil", error: error.message });
   }
 };
+
+// uploader/changer la photo de profil
+exports.changerPhotoProfil = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "Aucune image envoyée" });
+    }
+
+    const utilisateur = await Utilisateur.findById(req.utilisateur.id);
+
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    utilisateur.photo = req.file.path; // URL Cloudinary
+    await utilisateur.save();
+
+    res.json({
+      message: "Photo de profil mise à jour",
+      photo: utilisateur.photo,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de l'upload", error: error.message });
+  }
+};
