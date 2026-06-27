@@ -11,9 +11,7 @@ exports.ajouterAnnonce = async (req, res) => {
       prix: req.body.prix,
       localisation: req.body.localisation,
       categorie: req.body.categorie,
-      vendeur: req.body.vendeur,
-      telephone: req.body.telephone,
-      email: req.body.email,
+      utilisateur: req.utilisateur.id,
       statut: req.body.statut || "Disponible",
       image: req.file ? req.file.filename : "",
     });
@@ -40,6 +38,7 @@ exports.getAnnonces = async (req, res) => {
   try {
     const annonces = await Annonce.find()
       .populate("categorie")
+      .populate("utilisateur", "nom prenom email telephone")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -60,7 +59,9 @@ exports.getAnnonces = async (req, res) => {
 // ===============================
 exports.getAnnonceById = async (req, res) => {
   try {
-    const annonce = await Annonce.findById(req.params.id).populate("categorie");
+    const annonce = await Annonce.findById(req.params.id)
+      .populate("categorie")
+      .populate("utilisateur", "nom prenom email telephone");
 
     if (!annonce) {
       return res.status(404).json({
@@ -95,14 +96,19 @@ exports.modifierAnnonce = async (req, res) => {
       });
     }
 
+    // vérifier que c'est bien le propriétaire de l'annonce
+    if (annonce.utilisateur.toString() !== req.utilisateur.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'êtes pas autorisé à modifier cette annonce.",
+      });
+    }
+
     annonce.titre = req.body.titre || annonce.titre;
     annonce.description = req.body.description || annonce.description;
     annonce.prix = req.body.prix || annonce.prix;
     annonce.localisation = req.body.localisation || annonce.localisation;
     annonce.categorie = req.body.categorie || annonce.categorie;
-    annonce.vendeur = req.body.vendeur || annonce.vendeur;
-    annonce.telephone = req.body.telephone || annonce.telephone;
-    annonce.email = req.body.email || annonce.email;
     annonce.statut = req.body.statut || annonce.statut;
 
     if (req.file) {
@@ -135,6 +141,17 @@ exports.supprimerAnnonce = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Annonce introuvable.",
+      });
+    }
+
+    // vérifier que c'est bien le propriétaire de l'annonce (ou un admin)
+    if (
+      annonce.utilisateur.toString() !== req.utilisateur.id &&
+      req.utilisateur.role !== "admin"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'êtes pas autorisé à supprimer cette annonce.",
       });
     }
 

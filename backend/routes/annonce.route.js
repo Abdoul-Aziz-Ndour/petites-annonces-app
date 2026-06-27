@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const annonceController = require("../controllers/annonce.controller");
-const upload = require("../middleware/upload.middleware");
+const upload = require("../middlewares/upload.middleware");
+const { verifierToken } = require("../middlewares/auth.middleware");
 
 // ===============================
 // Ajouter une annonce avec image
@@ -10,6 +11,7 @@ const upload = require("../middleware/upload.middleware");
 // ===============================
 router.post(
   "/",
+  verifierToken,
   upload.single("image"),
   annonceController.ajouterAnnonce
 );
@@ -47,6 +49,7 @@ router.get(
 // ===============================
 router.put(
   "/:id",
+  verifierToken,
   upload.single("image"),
   annonceController.modifierAnnonce
 );
@@ -57,6 +60,7 @@ router.put(
 // ===============================
 router.delete(
   "/:id",
+  verifierToken,
   annonceController.supprimerAnnonce
 );
 

@@ -37,23 +37,10 @@ const annonceSchema = new mongoose.Schema(
       required: true,
     },
 
-    vendeur: {
-      type: String,
-      required: [true, "Le nom du vendeur est obligatoire"],
-      trim: true,
-    },
-
-    telephone: {
-      type: String,
-      required: [true, "Le numéro de téléphone est obligatoire"],
-      trim: true,
-    },
-
-    email: {
-      type: String,
-      required: [true, "L'adresse e-mail est obligatoire"],
-      trim: true,
-      lowercase: true,
+    utilisateur: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Utilisateur",
+      required: true,
     },
 
     statut: {
