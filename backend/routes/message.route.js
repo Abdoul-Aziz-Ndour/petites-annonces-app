@@ -2,18 +2,19 @@ const express = require("express");
 const router = express.Router();
 
 const messageController = require("../controllers/message.controller");
+const { verifierToken } = require("../middlewares/auth.middleware");
 
 // ===============================
 // Envoyer un message
 // POST /api/messages
 // ===============================
-router.post("/", messageController.envoyerMessage);
+router.post("/", verifierToken, messageController.envoyerMessage);
 
 // ===============================
 // Récupérer tous les messages
 // GET /api/messages
 // ===============================
-router.get("/", messageController.getMessages);
+router.get("/", verifierToken, messageController.getMessages);
 
 // ===============================
 // Récupérer les messages d'une annonce
@@ -21,6 +22,7 @@ router.get("/", messageController.getMessages);
 // ===============================
 router.get(
   "/annonce/:annonceId",
+  verifierToken,
   messageController.getMessagesParAnnonce
 );
 
@@ -28,18 +30,18 @@ router.get(
 // Récupérer un message par ID
 // GET /api/messages/:id
 // ===============================
-router.get("/:id", messageController.getMessageById);
+router.get("/:id", verifierToken, messageController.getMessageById);
 
 // ===============================
 // Marquer un message comme lu
 // PUT /api/messages/:id/lu
 // ===============================
-router.put("/:id/lu", messageController.marquerCommeLu);
+router.put("/:id/lu", verifierToken, messageController.marquerCommeLu);
 
 // ===============================
 // Supprimer un message
 // DELETE /api/messages/:id
 // ===============================
-router.delete("/:id", messageController.supprimerMessage);
+router.delete("/:id", verifierToken, messageController.supprimerMessage);
 
 module.exports = router;

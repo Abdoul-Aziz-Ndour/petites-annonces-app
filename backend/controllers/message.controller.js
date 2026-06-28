@@ -6,7 +6,7 @@ const Annonce = require("../models/annonce.model");
 // ===============================
 exports.envoyerMessage = async (req, res) => {
   try {
-    const { annonce, nom, email, telephone, contenu } = req.body;
+    const { annonce, contenu } = req.body;
 
     // Vérifier si l'annonce existe
     const annonceExiste = await Annonce.findById(annonce);
@@ -18,11 +18,21 @@ exports.envoyerMessage = async (req, res) => {
       });
     }
 
+    // le destinataire est le propriétaire de l'annonce
+    const destinataire = annonceExiste.utilisateur;
+
+    // empêcher de s'envoyer un message à soi-même
+    if (destinataire.toString() === req.utilisateur.id) {
+      return res.status(400).json({
+        success: false,
+        message: "Vous ne pouvez pas vous envoyer un message à vous-même.",
+      });
+    }
+
     const message = new Message({
       annonce,
-      nom,
-      email,
-      telephone,
+      expediteur: req.utilisateur.id,
+      destinataire,
       contenu,
     });
 
@@ -42,12 +52,20 @@ exports.envoyerMessage = async (req, res) => {
 };
 
 // ===============================
-// Récupérer tous les messages
+// Récupérer tous les messages de l'utilisateur connecté
+// (envoyés ou reçus)
 // ===============================
 exports.getMessages = async (req, res) => {
   try {
-    const messages = await Message.find()
+    const messages = await Message.find({
+      $or: [
+        { expediteur: req.utilisateur.id },
+        { destinataire: req.utilisateur.id },
+      ],
+    })
       .populate("annonce")
+      .populate("expediteur", "nom prenom email")
+      .populate("destinataire", "nom prenom email")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -68,12 +86,26 @@ exports.getMessages = async (req, res) => {
 // ===============================
 exports.getMessageById = async (req, res) => {
   try {
-    const message = await Message.findById(req.params.id).populate("annonce");
+    const message = await Message.findById(req.params.id)
+      .populate("annonce")
+      .populate("expediteur", "nom prenom email")
+      .populate("destinataire", "nom prenom email");
 
     if (!message) {
       return res.status(404).json({
         success: false,
         message: "Message introuvable.",
+      });
+    }
+
+    // vérifier que l'utilisateur connecté fait partie de la conversation
+    if (
+      message.expediteur._id.toString() !== req.utilisateur.id &&
+      message.destinataire._id.toString() !== req.utilisateur.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'êtes pas autorisé à voir ce message.",
       });
     }
 
@@ -94,11 +126,7 @@ exports.getMessageById = async (req, res) => {
 // ===============================
 exports.marquerCommeLu = async (req, res) => {
   try {
-    const message = await Message.findByIdAndUpdate(
-      req.params.id,
-      { lu: true },
-      { new: true }
-    );
+    const message = await Message.findById(req.params.id);
 
     if (!message) {
       return res.status(404).json({
@@ -106,6 +134,17 @@ exports.marquerCommeLu = async (req, res) => {
         message: "Message introuvable.",
       });
     }
+
+    // seul le destinataire peut marquer comme lu
+    if (message.destinataire.toString() !== req.utilisateur.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'êtes pas autorisé à modifier ce message.",
+      });
+    }
+
+    message.lu = true;
+    await message.save();
 
     res.status(200).json({
       success: true,
@@ -125,7 +164,7 @@ exports.marquerCommeLu = async (req, res) => {
 // ===============================
 exports.supprimerMessage = async (req, res) => {
   try {
-    const message = await Message.findByIdAndDelete(req.params.id);
+    const message = await Message.findById(req.params.id);
 
     if (!message) {
       return res.status(404).json({
@@ -133,6 +172,19 @@ exports.supprimerMessage = async (req, res) => {
         message: "Message introuvable.",
       });
     }
+
+    // seul l'expéditeur ou le destinataire peut supprimer
+    if (
+      message.expediteur.toString() !== req.utilisateur.id &&
+      message.destinataire.toString() !== req.utilisateur.id
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous n'êtes pas autorisé à supprimer ce message.",
+      });
+    }
+
+    await message.deleteOne();
 
     res.status(200).json({
       success: true,
@@ -147,13 +199,20 @@ exports.supprimerMessage = async (req, res) => {
 };
 
 // ===============================
-// Récupérer les messages d'une annonce
+// Récupérer les messages d'une annonce (pour l'utilisateur connecté)
 // ===============================
 exports.getMessagesParAnnonce = async (req, res) => {
   try {
     const messages = await Message.find({
       annonce: req.params.annonceId,
-    }).sort({ createdAt: -1 });
+      $or: [
+        { expediteur: req.utilisateur.id },
+        { destinataire: req.utilisateur.id },
+      ],
+    })
+      .populate("expediteur", "nom prenom email")
+      .populate("destinataire", "nom prenom email")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,

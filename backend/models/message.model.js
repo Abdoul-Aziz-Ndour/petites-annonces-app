@@ -8,23 +8,16 @@ const messageSchema = new mongoose.Schema(
       required: true,
     },
 
-    nom: {
-      type: String,
-      required: [true, "Le nom est obligatoire"],
-      trim: true,
+    expediteur: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Utilisateur",
+      required: true,
     },
 
-    email: {
-      type: String,
-      required: [true, "L'email est obligatoire"],
-      trim: true,
-      lowercase: true,
-    },
-
-    telephone: {
-      type: String,
-      trim: true,
-      default: "",
+    destinataire: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Utilisateur",
+      required: true,
     },
 
     contenu: {

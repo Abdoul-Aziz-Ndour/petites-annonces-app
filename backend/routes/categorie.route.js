@@ -2,12 +2,13 @@ const express = require("express");
 const router = express.Router();
 
 const categorieController = require("../controllers/categorie.controller");
+const { verifierToken, verifierAdmin } = require("../middlewares/auth.middleware");
 
 // ===============================
-// Ajouter une catégorie
+// Ajouter une catégorie (admin uniquement)
 // POST /api/categories
 // ===============================
-router.post("/", categorieController.ajouterCategorie);
+router.post("/", verifierToken, verifierAdmin, categorieController.ajouterCategorie);
 
 // ===============================
 // Récupérer toutes les catégories
@@ -22,15 +23,15 @@ router.get("/", categorieController.getCategories);
 router.get("/:id", categorieController.getCategorieById);
 
 // ===============================
-// Modifier une catégorie
+// Modifier une catégorie (admin uniquement)
 // PUT /api/categories/:id
 // ===============================
-router.put("/:id", categorieController.modifierCategorie);
+router.put("/:id", verifierToken, verifierAdmin, categorieController.modifierCategorie);
 
 // ===============================
-// Supprimer une catégorie
+// Supprimer une catégorie (admin uniquement)
 // DELETE /api/categories/:id
 // ===============================
-router.delete("/:id", categorieController.supprimerCategorie);
+router.delete("/:id", verifierToken, verifierAdmin, categorieController.supprimerCategorie);
 
 module.exports = router;
