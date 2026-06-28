@@ -3,7 +3,7 @@ const router = express.Router();
 
 const annonceController = require("../controllers/annonce.controller");
 const upload = require("../middlewares/upload.middleware");
-const { verifierToken } = require("../middlewares/auth.middleware");
+const { verifierToken, verifierAdmin } = require("../middlewares/auth.middleware");
 
 // ===============================
 // Ajouter une annonce avec image
@@ -23,6 +23,17 @@ router.post(
 router.get(
   "/recherche",
   annonceController.rechercherAnnonce
+);
+
+// ===============================
+// Statistiques globales (admin uniquement)
+// GET /api/annonces/statistiques
+// ===============================
+router.get(
+  "/statistiques",
+  verifierToken,
+  verifierAdmin,
+  annonceController.getStatistiques
 );
 
 // ===============================
@@ -52,6 +63,16 @@ router.put(
   verifierToken,
   upload.single("image"),
   annonceController.modifierAnnonce
+);
+
+// ===============================
+// Activer/désactiver une annonce
+// PUT /api/annonces/:id/statut
+// ===============================
+router.put(
+  "/:id/statut",
+  verifierToken,
+  annonceController.toggleStatutAnnonce
 );
 
 // ===============================
