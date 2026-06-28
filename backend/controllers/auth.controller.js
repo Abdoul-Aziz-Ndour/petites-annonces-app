@@ -29,10 +29,28 @@ exports.inscription = async (req, res) => {
       telephone,
     });
 
+    // générer un token de vérification email
+    const verifToken = crypto.randomBytes(32).toString('hex');
+    nouvelUtilisateur.verification_token = verifToken;
+    await nouvelUtilisateur.save();
+
+    const lienVerification = `http://localhost:5000/api/auth/verifier-email/${verifToken}`;
+
+    await transporter.sendMail({
+      from: '"Petites Annonces" <no-reply@petites-annonces.com>',
+      to: nouvelUtilisateur.email,
+      subject: "Vérifiez votre adresse email",
+      html: `
+        <p>Bonjour ${nouvelUtilisateur.prenom},</p>
+        <p>Merci de vous être inscrit. Cliquez sur ce lien pour vérifier votre email :</p>
+        <a href="${lienVerification}">${lienVerification}</a>
+      `,
+    });
+
     const token = genererToken(nouvelUtilisateur);
 
     res.status(201).json({
-      message: "Inscription réussie",
+      message: "Inscription réussie. Vérifiez votre email pour activer votre compte.",
       token,
       utilisateur: {
         id: nouvelUtilisateur._id,
@@ -232,5 +250,63 @@ exports.changerPhotoProfil = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Erreur lors de l'upload", error: error.message });
+  }
+};
+
+// lister tous les utilisateurs (admin uniquement)
+exports.getUtilisateurs = async (req, res) => {
+  try {
+    const utilisateurs = await Utilisateur.find().select('-mot_de_passe');
+
+    res.json({
+      total: utilisateurs.length,
+      utilisateurs,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la récupération des utilisateurs", error: error.message });
+  }
+};
+
+// bloquer / débloquer un utilisateur (admin uniquement)
+exports.toggleBloquerUtilisateur = async (req, res) => {
+  try {
+    const utilisateur = await Utilisateur.findById(req.params.id);
+
+    if (!utilisateur) {
+      return res.status(404).json({ message: "Utilisateur introuvable" });
+    }
+
+    utilisateur.est_bloque = !utilisateur.est_bloque;
+    await utilisateur.save();
+
+    res.json({
+      message: utilisateur.est_bloque ? "Utilisateur bloqué" : "Utilisateur débloqué",
+      utilisateur: {
+        id: utilisateur._id,
+        nom: utilisateur.nom,
+        prenom: utilisateur.prenom,
+        email: utilisateur.email,
+        est_bloque: utilisateur.est_bloque,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la mise à jour", error: error.message });
+  }
+};
+
+// vérifier l'email avec le token reçu par mail
+exports.verifierEmail = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const utilisateur = await Utilisateur.findOne({ verification_token: token });
+    if (!utilisateur) {
+      return res.status(400).json({ message: "Lien de vérification invalide" });
+    }
+    utilisateur.email_verifie = true;
+    utilisateur.verification_token = undefined;
+    await utilisateur.save();
+    res.json({ message: "Email vérifié avec succès" });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors de la vérification", error: error.message });
   }
 };

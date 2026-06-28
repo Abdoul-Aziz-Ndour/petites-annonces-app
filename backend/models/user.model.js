@@ -46,6 +46,9 @@ const userSchema = new mongoose.Schema({
   reinitialisation_expire: {
     type: Date,
   },
+  verification_token: {
+    type: String,
+  },
 }, { timestamps: true });
 
 // hacher le mot de passe avant sauvegarde
